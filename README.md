@@ -21,12 +21,27 @@ That's exactly what digital signatures are designed to answer.
 
 Suppose Alice wants to send a PDF file to Bob.
 
-Before sending, Alice uses her **private key** to create a **digital signature** for the file. Then she sends Bob two things:
+### 1. Key Generation (Alice does this once)
 
-- The PDF file
-- The file's digital signature
+```
+public_key, private_key = key_generation()
+```
 
-Bob uses Alice's **public key** to check the signature against the file he received.
+Alice keeps `private_key` secret and shares `public_key` with everyone.
+
+### 2. Signing (Alice signs the file)
+
+```
+signature = sign(file, private_key)
+```
+
+Alice sends Bob: the `file`, the `signature`, and her `public_key`.
+
+### 3. Verification (Bob checks the signature)
+
+```
+is_valid = verify(file, signature, public_key)
+```
 
 If the signature checks out, Bob can be confident that:
 
@@ -39,13 +54,13 @@ If even one letter, digit, or bit of the file changes, the signature check fails
 
 ## RSA in simple terms
 
-RSA is the oldest and most widely used digital signature scheme. Here's the easy way to picture it:
+RSA is the oldest and most widely used digital signature scheme. Here's how it works:
 
-- You make a public padlock anyone can snap shut (your **public key**), but only you hold the key that opens it (your **private key**).
-- To sign, instead of locking the whole message, you take a short fingerprint (a hash) of it and "lock" that fingerprint with your private key. Anyone can unlock it with your public key and check the fingerprint matches the message.
+**`key_generation()`** — Pick two huge, secret prime numbers `p` and `q`, then multiply them to get `n = p × q`. This `n` is public — but factoring it back into `p` and `q` is brutally hard. Compute a secret number `d` using `p` and `q`. The math guarantees that `d` and a public exponent `E` are inverses: anything raised to `d` then `E` (mod `n`) comes back unchanged. Your **public key** is `(n, E)`, your **private key** is `(n, d)`.
 
-**Where does RSA's security come from?**
-You multiply two huge, secret prime numbers together to get a number `n`. Multiplying them is easy. But if all someone has is `n`, working backward to find those two primes (factoring `n`) is brutally hard for classical computers.
+**`sign()`** — Hash the message to get a fingerprint `h`, then compute `signature = h^d mod n`. Only you can do this because only you know `d`.
+
+**`verify()`** — Compute `signature^E mod n` and check if it equals the hash of the message. If it matches, the signature is valid.
 
 **So what's the problem?**
 Shor's algorithm, run on a quantum computer, can factor `n` quickly. Once quantum computers are powerful enough, RSA stops being safe — that's the whole motivation for schemes like ML-DSA.
@@ -54,17 +69,21 @@ Shor's algorithm, run on a quantum computer, can factor `n` quickly. Once quantu
 
 Instead of relying on "factoring big numbers," ML-DSA relies on a geometric problem called the **lattice problem** — one that, as far as we know, quantum computers have no fast trick for either.
 
-Here's the easy way to picture it:
+**`key_generation()`** — There's a public matrix `A` that everyone can see — think of it as a big, public maze. Your **private key** is a short, secret vector `s1` (a simple path through that maze). Your **public key** `t` is just where that path ends up: `t = A·s1`. Given only the endpoint, finding the secret path is essentially impossible — even for a quantum computer.
 
-- There's a public grid, or "matrix" (`A`), that everyone can see — think of it as a big, public maze.
-- Your private key is a short, simple secret path through that maze (a vector `s1`).
-- Your public key (`t`) is just where that path ends up: `t = A·s1`. Given only the endpoint, finding the secret path that leads there is essentially impossible — even for a quantum computer.
-- To sign, you take a fresh random hop (`y`), see where it lands (`w = A·y`), then build a small "challenge" number (`c`) from the message and `w`, and mix it into your secret path: `z = y + c·s1`.
-- You only ever send `(z, c)` — never the secret path or the random hop. The recipient can rebuild `w` from your public key and these two numbers alone, check it produces the same challenge `c`, and thus verify the signature.
+**`sign()`** — Take a fresh random vector `y`, compute where it lands `w = A·y`, then build a challenge `c` from the message and `w`. Mix the challenge into your secret: `z = y + c·s1`. Return `(z, c)` — never the secret `s1` or the random `y`.
 
-## Why does this matter?
+**`verify()`** — Rebuild `w` using only public data: `w = A·z - c·t`. Check if hashing the message with this `w` produces the same challenge `c`. If it matches, the signature is valid.
 
-Both schemes share the same core idea: a **hard problem** that's easy to verify but brutally hard to reverse. The difference is that RSA's hard problem (factoring) falls to quantum computers, while lattice problems so far appear resistant — which is why researchers are building and studying post-quantum schemes like ML-DSA.
+## Why does ML-DSA survive quantum computers?
+
+Both RSA and ML-DSA rely on a **hard problem** — easy to verify, brutally hard to reverse. The difference is *which* hard problem.
+
+**RSA's weakness:** Shor's algorithm gives quantum computers a fast way to factor large numbers. Once you can factor `n` back into `p` and `q`, you can compute the private key `d` and forge any signature. RSA is broken.
+
+**ML-DSA's strength:** No known quantum algorithm can efficiently solve lattice problems like finding a short secret vector `s1` from `t = A·s1`. Quantum computers offer no significant speedup here — the best attacks are still exponential, just like on classical computers.
+
+That's why ML-DSA is called "post-quantum": it's designed to stay secure even after large-scale quantum computers exist.
 
 ## The code
 
