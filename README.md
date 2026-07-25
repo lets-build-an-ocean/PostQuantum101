@@ -1,93 +1,74 @@
-# Hello to everyone reading in English! 👋
+# سلام به همه‌ی همراهان! 👋
 
-In this repo I want to walk step by step through one of the most important and newest **post-quantum digital signature** algorithms — one designed to resist attacks from quantum computers.
+در این مخزن می‌خواهم قدم‌به‌قدم یکی از مهم‌ترین و جدیدترین الگوریتم‌های **امضای دیجیتال پست‌کوانتمی** را بررسی کنم — الگوریتمی که در برابر حملات کامپیوترهای کوانتومی مقاوم طراحی شده است.
 
-If, like me, you don't have patience for long papers, you're in the right place. This takes less than **10 minutes** to read, but by the end you'll have a solid picture of what a digital signature is and why post-quantum signatures matter.
-
----
-
-# What is a digital signature?
-
-A digital signature is something attached to a message or file so anyone can check:
-
-- Did this message really come from the sender?
-- Has the message changed since it was sent?
-
-That's exactly what digital signatures are designed to answer.
-
-> **Note:** A digital signature does not hide or encrypt the message. Anyone can see the message's content — the signature only confirms who sent it and that it wasn't tampered with.
-
-## An example
-
-Suppose Alice wants to send a PDF file to Bob.
-
-### 1. Key Generation (Alice does this once)
-
-```
-public_key, private_key = key_generation()
-```
-
-Alice keeps `private_key` secret and shares `public_key` with everyone.
-
-### 2. Signing (Alice signs the file)
-
-```
-signature = sign(file, private_key)
-```
-
-Alice sends Bob: the `file`, the `signature`, and her `public_key`.
-
-### 3. Verification (Bob checks the signature)
-
-```
-is_valid = verify(file, signature, public_key)
-```
-
-If the signature checks out, Bob can be confident that:
-
-- The file was signed by whoever holds the private key (Alice).
-- The file hasn't changed since it was signed.
-
-If even one letter, digit, or bit of the file changes, the signature check fails and Bob knows the file isn't trustworthy.
+اگر مثل من حوصله‌ی خواندن مقالات طولانی را ندارید، جای درستی آمده‌اید. این مطلب کمتر از **۱۰ دقیقه** وقت شما را می‌گیرد، اما در پایان دید خوبی درباره‌ی اینکه امضای دیجیتال چیست، چگونه کار می‌کند و ایده‌ی کلی الگوریتم‌های پست‌کوانتمی پیدا خواهید کرد.
 
 ---
 
-## RSA in simple terms
+# امضای دیجیتال چیست؟
 
-RSA is the oldest and most widely used digital signature scheme. Here's how it works:
+امضای دیجیتال چیزی است که به یک پیام یا فایل پیوست می‌شود تا هر کسی بتواند بررسی کند:
 
-**`key_generation()`** — Pick two huge, secret prime numbers `p` and `q`, then multiply them to get `n = p × q`. This `n` is public — but factoring it back into `p` and `q` is brutally hard. Compute a secret number `d` using `p` and `q`. The math guarantees that `d` and a public exponent `E` are inverses: anything raised to `d` then `E` (mod `n`) comes back unchanged. Your **public key** is `(n, E)`, your **private key** is `(n, d)`.
+- آیا این پیام واقعاً از سمت فرستنده ارسال شده است؟
+- آیا پیام از زمان ارسال تغییر کرده است؟
 
-**`sign()`** — Hash the message to get a fingerprint `h`, then compute `signature = h^d mod n`. Only you can do this because only you know `d`.
+دقیقاً همین دو سؤال است که امضای دیجیتال برای پاسخ به آن‌ها طراحی شده.
 
-**`verify()`** — Compute `signature^E mod n` and check if it equals the hash of the message. If it matches, the signature is valid.
+> **توجه:** امضای دیجیتال محتوای پیام را مخفی یا رمزنگاری نمی‌کند. هر کسی می‌تواند محتوای پیام را ببیند — امضا فقط تأیید می‌کند که پیام توسط چه کسی ارسال شده و دستکاری نشده است.
 
-**So what's the problem?**
-Shor's algorithm, run on a quantum computer, can factor `n` quickly. Once quantum computers are powerful enough, RSA stops being safe — that's the whole motivation for schemes like ML-DSA.
+## یک مثال ساده
 
-## ML-DSA in simple terms (post-quantum)
+فرض کنید آلیس می‌خواهد یک فایل پی دی اف به باب بفرستد.
 
-Instead of relying on "factoring big numbers," ML-DSA relies on a geometric problem called the **lattice problem** — one that, as far as we know, quantum computers have no fast trick for either.
+قبل از ارسال، آلیس با استفاده از **کلید خصوصی** خود یک **امضای دیجیتال** برای فایل ایجاد می‌کند. سپس دو چیز برای باب می‌فرستد:
 
-**`key_generation()`** — There's a public matrix `A` that everyone can see — think of it as a big, public maze. Your **private key** is a short, secret vector `s1` (a simple path through that maze). Your **public key** `t` is just where that path ends up: `t = A·s1`. Given only the endpoint, finding the secret path is essentially impossible — even for a quantum computer.
+- فایل PDF
+- امضای دیجیتال فایل
 
-**`sign()`** — Take a fresh random vector `y`, compute where it lands `w = A·y`, then build a challenge `c` from the message and `w`. Mix the challenge into your secret: `z = y + c·s1`. Return `(z, c)` — never the secret `s1` or the random `y`.
+باب با استفاده از **کلید عمومی** آلیس، امضا را با فایل دریافتی مقایسه می‌کند.
 
-**`verify()`** — Rebuild `w` using only public data: `w = A·z - c·t`. Check if hashing the message with this `w` produces the same challenge `c`. If it matches, the signature is valid.
+اگر امضا درست باشد، باب مطمئن می‌شود که:
 
-## Why does ML-DSA survive quantum computers?
+- فایل توسط کسی که کلید خصوصی را در اختیار دارد (آلیس) امضا شده.
+- فایل از زمان امضا تغییر نکرده است.
 
-Both RSA and ML-DSA rely on a **hard problem** — easy to verify, brutally hard to reverse. The difference is *which* hard problem.
+اگر حتی یک حرف، عدد یا بیت از فایل تغییر کند، بررسی امضا ناموفق می‌شود و باب می‌داند که فایل قابل اعتماد نیست.
 
-**RSA's weakness:** Shor's algorithm gives quantum computers a fast way to factor large numbers. Once you can factor `n` back into `p` and `q`, you can compute the private key `d` and forge any signature. RSA is broken.
+---
 
-**ML-DSA's strength:** No known quantum algorithm can efficiently solve lattice problems like finding a short secret vector `s1` from `t = A·s1`. Quantum computers offer no significant speedup here — the best attacks are still exponential, just like on classical computers.
+## RSA به زبان ساده
 
-That's why ML-DSA is called "post-quantum": it's designed to stay secure even after large-scale quantum computers exist.
+RSA قدیمی‌ترین و رایج‌ترین الگوریتم امضای دیجیتال است. تصویر کردن آن به این صورت آسان است:
 
-## The code
+- شما یک قفل عمومی می‌سازید که هر کسی می‌تواند آن را ببیند (**کلید عمومی** شما)، اما فقط شما کلید باز کردن آن را دارید (**کلید خصوصی** شما).
+- برای امضا کردن، به جای قفل کردن کل پیام، یک اثر انگشت کوچک (هش) از آن می‌گیرید و آن اثر انگشت را با کلید خصوصی خود «قفل» می‌کنید. هر کسی می‌تواند آن را با کلید عمومی شما باز کند و مطمئن شود که با اثر انگشت پیام مطابقت دارد — و این ثابت می‌کند که پیام از طرف شما آمده.
 
-- `rsa.py` — a minimal RSA implementation
-- `ml_dsa.py` — a simplified ML-DSA implementation (for easier learning; it skips the error term and high-bit rounding that real ML-DSA uses)
+**امنیت RSA از کجا می‌آید؟**
+شما د عدد اول بسیار بزرگ و مخفی را در هم ضرب می‌کنید تا عدد `n` به دست آید. ضرب کردن آن‌ها آسان است. اما اگر فقط `n` در اختیار کسی باشد، بازگشت از `n` به دو عدد اول (تجزیه‌ی `n`) برای کامپیوترهای معمولی بسیار سخت است. کلید خصوصی شما در همین سختی پنهان شده است.
 
-*(نسخه‌ی فارسی: [README.md](README.md))*
+**پس مشکل کجاست؟**
+الگوریتم شور، وقتی روی کامپیوتر کوانتومی اجرا شود، می‌تواند `n` را به سرعت تجزیه کند. وقتی کامپیوترهای کوانتومی به اندازه‌ی کافی قدرتمند شوند، RSA دیگر امن نیست — و دقیقاً همین انگیزه‌ی طرحی مثل ML-DSA است.
+
+## ML-DSA به زبان ساده (پست‌کوانتمی)
+
+ML-DSA به جای تکیه بر «تجزیه‌ی اعداد بزرگ»، بر یک مسئله‌ی هندسی به نام **مسئله‌ی شبکه (Lattice)** تکیه دارد — مسئله‌ای که تا جایی که می‌دانیم، کامپیوترهای کوانتومی هم ترفند سریعی برای حل آن ندارند.
+
+تصویر کردن آن به این صورت آسان است:
+
+- یک شبکه یا «ماتریس» عمومی (`A`) وجود دارد که همه می‌توانند آن را ببینند — آن را مثل یک هزارتوی بزرگ عمومی در نظر بگیرید.
+- کلید خصوصی شما یک مسیر مخفی کوتاه و ساده از درون آن هزارتو (بردار `s1`) است.
+- کلید عمومی شما (`t`) فقط جایی است که آن مسیر به آن ختم می‌شود: `t = A·s1`. با داشتن فقط نقطه‌ی پایانی، پیدا کردن مسیر مخفی که به آن منتهی می‌شود اساساً غیرممکن است — حتی برای یک کامپیوتر کوانتومی.
+- برای امضا کردن، یک پرش تصادفی تازه (`y`) برمی‌دارید، می‌بینید کجا فرود می‌آید (`w = A·y`)، سپس یک عدد «چالش» کوچک (`c`) از پیام و `w` می‌سازید و آن را در مسیر مخفی خود می‌آمیزید: `z = y + c·s1`.
+- شما فقط `(z, c)` را ارسال می‌کنید — هرگز مسیر مخفی یا پرش تصادفی را. دریافت‌کننده می‌تواند `w` را از کلید عمومی شما و همین دو عدد بازسازی کند، بررسی کند که همان چالش `c` تولید می‌شود و تأیید کند که امضا اصیل است — بدون اینکه راز شما فاش شود.
+
+## چرا این مهم است؟
+
+هر دو الگوریتم ایده‌ی اصلی مشترکی دارند: یک **مسئله‌ی سخت** که تأیید کردنش آسان اما برعکس کردنش بسیار دشوار است. تفاوت این است که مسئله‌ی سخت RSA (تجزیه) در برابر کامپیوترهای کوانتومی شکست‌پذیر است، در حالی که مسئله‌ی سخت ML-DSA (شبکه‌ها) تاکنون این ضعف را نشان نداده — و به همین دلیل ML-DSA به عنوان یکی از الگوریتم‌های استاندارد پست‌کوانتمی انتخاب شده است.
+
+## کدها
+
+- `rsa.py` — یک پیاده‌سازی حداقلی از RSA
+- `ml_dsa.py` — یک پیاده‌سازی ساده‌شده از ML-DSA (برای یادگیری راحت‌تر؛ جمله‌ی خطا و گرد کردن بیت‌های بالا که در ML-DSA واقعی استفاده می‌شود را حذف کرده)
+
+*(English version: [readme.en.md](readme.en.md))*
