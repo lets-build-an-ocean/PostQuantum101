@@ -65,6 +65,8 @@ RSA is the oldest and most widely used digital signature scheme. Here's how it w
 **So what's the problem?**
 Shor's algorithm, run on a quantum computer, can factor `n` quickly. Once quantum computers are powerful enough, RSA stops being safe — that's the whole motivation for schemes like ML-DSA.
 
+![RSA hardness: multiplying primes is easy, factoring n back apart is hard](assets/rsa-hardness.gif)
+
 ## ML-DSA in simple terms (post-quantum)
 
 Instead of relying on "factoring big numbers," ML-DSA relies on a geometric problem called the **lattice problem** — one that, as far as we know, quantum computers have no fast trick for either.
@@ -74,6 +76,10 @@ Instead of relying on "factoring big numbers," ML-DSA relies on a geometric prob
 **`sign()`** — Take a fresh random vector `y`, compute where it lands `w = A·y`, then build a challenge `c` from the message and `w`. Mix the challenge into your secret: `z = y + c·s1`. Return `(z, c)` — never the secret `s1` or the random `y`.
 
 **`verify()`** — Rebuild `w` using only public data: `w = A·z - c·t`. Check if hashing the message with this `w` produces the same challenge `c`. If it matches, the signature is valid.
+
+![ML-DSA hardness: walking the lattice with a short secret is easy, reversing it isn't](assets/ml-dsa-hardness.gif)
+
+![ML-DSA sign & verify: only (z, c) ever cross from signer to verifier — s1 and y never do](assets/ml-dsa-sign-verify.gif)
 
 ## Why does ML-DSA survive quantum computers?
 
@@ -85,9 +91,13 @@ Both RSA and ML-DSA rely on a **hard problem** — easy to verify, brutally hard
 
 That's why ML-DSA is called "post-quantum": it's designed to stay secure even after large-scale quantum computers exist.
 
+That security doesn't come free — ML-DSA trades bigger keys and signatures for quantum resistance:
+
+![RSA vs ML-DSA: the cost of quantum resistance in key and signature size](assets/rsa-vs-ml-dsa-tradeoff.gif)
+
 ## The code
 
 - `rsa.py` — a minimal RSA implementation
 - `ml_dsa.py` — a simplified ML-DSA implementation (for easier learning; it skips the error term and high-bit rounding that real ML-DSA uses)
 
-*(نسخه‌ی فارسی: [README.md](README.md))*
+*(نسخه‌ی فارسی: [readme.fa.md](readme.fa.md))*
